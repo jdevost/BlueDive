@@ -34,6 +34,7 @@ struct DesktopLogbookView: View {
     @Binding var selectedDiveID: UUID?
     @Binding var sortOrder: [KeyPathComparator<DiveSummary>]
     @State private var prefs = UserPreferences.shared
+    @State private var selectedDetailTab: DiveTab = .menu
 
     private var rows: [DiveSummary] {
         sortOrder.isEmpty ? store.cachedFilteredSummaries : store.cachedFilteredSummaries.sorted(using: sortOrder)
@@ -60,7 +61,12 @@ struct DesktopLogbookView: View {
                 if let id = selectedDiveID, let dive = store.diveByID[id] {
                     // Selection belongs to the table. Do not enable the detail's independent
                     // swipe navigation, which would leave the highlighted row behind.
-                    DiveDetailView(dive: dive, diveNumber: dive.diveNumber ?? 0)
+                    DiveDetailView(
+                        dive: dive,
+                        initialTab: selectedDetailTab,
+                        diveNumber: dive.diveNumber ?? 0,
+                        onTabChange: { selectedDetailTab = $0 }
+                    )
                         .id(id)
                 } else {
                     ContentUnavailableView("Select a dive", systemImage: "water.waves",

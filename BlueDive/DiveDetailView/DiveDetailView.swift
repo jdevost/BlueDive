@@ -69,6 +69,7 @@ struct DiveDetailView: View {
     @State var dive: Dive
     let sortedDives: [Dive]
     let isSlidePreview: Bool
+    private let onTabChange: ((DiveTab) -> Void)?
     @Environment(\.modelContext) var modelContext
     @Environment(\.locale) var locale
     @Environment(\.dismiss) private var dismiss
@@ -137,10 +138,11 @@ struct DiveDetailView: View {
     }()
     #endif
 
-    init(dive: Dive, sortedDives: [Dive] = [], isSlidePreview: Bool = false, initialTab: DiveTab = .menu, diveNumber: Int = 0) {
+    init(dive: Dive, sortedDives: [Dive] = [], isSlidePreview: Bool = false, initialTab: DiveTab = .menu, diveNumber: Int = 0, onTabChange: ((DiveTab) -> Void)? = nil) {
         self._dive = State(initialValue: dive)
         self.sortedDives = sortedDives
         self.isSlidePreview = isSlidePreview
+        self.onTabChange = onTabChange
         self._selectedTab = State(initialValue: initialTab)
         self._cachedDiveNumber = State(initialValue: diveNumber)
     }
@@ -467,6 +469,9 @@ struct DiveDetailView: View {
             exportDocument = nil
         }
         #endif
+        .onChange(of: selectedTab) { _, newValue in
+            onTabChange?(newValue)
+        }
         .onChange(of: dive) { oldValue, newValue in
             guard oldValue != newValue else { return }
             cachedDiveNumber = newValue.diveNumber ?? pendingDiveNumber(for: newValue)

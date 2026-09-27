@@ -34,6 +34,8 @@ BlueDive is a modern, actively maintained dive log app designed as a full-featur
 | iPad                | iPadOS 18.6                      |
 | Mac (Apple Silicon) | macOS 15 (via Designed for iPad) |
 
+The development project also includes a native macOS 15.6+ interface with a sidebar, dive table, and detail pane. See [Native desktop development](DESKTOP_DEVELOPMENT.md) for its scope and isolated testing instructions.
+
 ## Contributing
 
 BlueDive welcomes contributions from developers and divers alike. See [CONTRIBUTING.md](https://github.com/houle988/BlueDive/blob/main/CONTRIBUTING.md) for how to get involved.

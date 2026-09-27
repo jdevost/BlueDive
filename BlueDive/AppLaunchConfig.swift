@@ -21,3 +21,16 @@ extension EnvironmentValues {
         set { self[IntroVisibleKey.self] = newValue }
     }
 }
+
+/// Debug verification runs use a disposable store and never contact CloudKit or
+/// publish widget data. A distinct bundle ID also isolates app preferences.
+enum BlueDiveLaunchMode {
+    static var isEphemeralLogbook: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--ephemeral-logbook")
+            || Bundle.main.bundleIdentifier == "app.bluedive.desktop.validation"
+        #else
+        false
+        #endif
+    }
+}

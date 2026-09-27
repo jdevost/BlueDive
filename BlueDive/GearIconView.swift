@@ -1,5 +1,9 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
 // MARK: - Gear Icon View
 
@@ -17,7 +21,7 @@ struct GearIconView: View {
         self.category = category
         self.size = size
         self.noMatchFallbackIcon = noMatchFallbackIcon
-        if let name = GearIconView.assetName(forManufacturer: manufacturer), UIImage(named: name) != nil {
+        if let name = GearIconView.assetName(forManufacturer: manufacturer), PlatformImage(named: name) != nil {
             self.resolvedAsset = name
         } else {
             self.resolvedAsset = nil

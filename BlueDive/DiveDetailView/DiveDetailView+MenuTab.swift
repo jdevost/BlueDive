@@ -20,6 +20,22 @@ extension DiveDetailView {
         NSLocalizedString("min", bundle: Bundle.forAppLanguage(), comment: "Abbreviation for minutes on chart time axis")
     }
 
+    private var overviewDuration: String {
+        #if os(macOS)
+        return "\(Double(dive.duration).localizedString(decimals: 0)) \(minAbbreviation)"
+        #else
+        return dive.shortFormattedDuration
+        #endif
+    }
+
+    private var overviewFullDuration: String {
+        #if os(macOS)
+        overviewDuration
+        #else
+        dive.formattedDuration
+        #endif
+    }
+
     var menuTabContent: some View {
         VStack(spacing: 20) {
             depthProfileSection
@@ -94,6 +110,13 @@ extension DiveDetailView {
     var depthProfileSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
+                #if os(macOS)
+                if let number = dive.diveNumber {
+                    Text(verbatim: "#\(Double(number).localizedString(decimals: 0))")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.cyan)
+                }
+                #else
                 Text(verbatim: "#\(dive.diveNumber ?? diveNumber)")
                     .font(.system(.caption, design: .monospaced))
                     .fontWeight(.bold)
@@ -102,6 +125,7 @@ extension DiveDetailView {
                     .background(Color.cyan.opacity(0.2))
                     .foregroundStyle(.cyan)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
+                #endif
 
                 Text(dive.siteName)
                     .font(.headline)
@@ -111,7 +135,7 @@ extension DiveDetailView {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(dive.shortFormattedDuration)
+                        Text(verbatim: overviewDuration)
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.semibold)
                             .padding(.horizontal, 6)
@@ -1081,7 +1105,7 @@ extension DiveDetailView {
 
             DetailCard(
                 title: "DURATION",
-                value: dive.formattedDuration,
+                value: overviewFullDuration,
                 icon: "clock",
                 color: .green
             )
@@ -1184,7 +1208,13 @@ extension DiveDetailView {
                     Text("Dive #")
                         .font(.caption)
                         .foregroundStyle(.gray)
-                    Text(verbatim: "\(dive.diveNumber ?? diveNumber)")
+                    Group {
+                        #if os(macOS)
+                        Text(verbatim: dive.diveNumber.map { Double($0).localizedString(decimals: 0) } ?? "—")
+                        #else
+                        Text(verbatim: "\(dive.diveNumber ?? diveNumber)")
+                        #endif
+                    }
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)

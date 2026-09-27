@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+#if os(macOS)
+import AppKit
+#endif
 
 // MARK: - Import File Type
 
@@ -118,15 +121,18 @@ extension ContentView {
         case .success(let urls):
             guard let url = urls.first else { return }
             Task {
-                guard url.startAccessingSecurityScopedResource() else {
+                let accessed = url.startAccessingSecurityScopedResource()
+                let rawData = try? Data(contentsOf: url)
+                if accessed { url.stopAccessingSecurityScopedResource() }
+                // A local file may already be readable without a security-scoped grant.
+                // Judge access by the read, as with externally opened files.
+                guard let rawData else {
                     await MainActor.run {
                         importError = .accessDenied
                         showErrorAlert = true
                     }
                     return
                 }
-                let rawData = try? Data(contentsOf: url)
-                url.stopAccessingSecurityScopedResource()
                 await MainActor.run { routeImportData(rawData, url: url) }
             }
         case .failure(let error):

@@ -30,6 +30,30 @@ struct ImportPreviewSheet: View {
     private var totalCount: Int { newItems.count + duplicateItems.count }
 
     var body: some View {
+        #if os(macOS)
+        VStack(spacing: 16) {
+            headerCard
+            summaryCard
+            HSplitView {
+                ScrollView {
+                    newItemsList
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .frame(minWidth: 320)
+                ScrollView {
+                    duplicateItemsList
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .frame(minWidth: 320)
+            }
+            Divider()
+            actionButtons
+        }
+        .padding(20)
+        .background(Color.platformBackground)
+        .frame(minWidth: 760, idealWidth: 1040, minHeight: 600, idealHeight: 740)
+        .onExitCommand(perform: onCancel)
+        #else
         ZStack {
             Color.platformBackground.ignoresSafeArea()
             ScrollView {
@@ -43,13 +67,9 @@ struct ImportPreviewSheet: View {
                 .padding(.vertical, 24)
             }
         }
-        #if os(macOS)
-        .frame(
-            minWidth: 480, idealWidth: 560, maxWidth: 700,
-            minHeight: 460, idealHeight: 580, maxHeight: 800
-        )
         #endif
     }
+
 
     // MARK: - Header
 
@@ -211,16 +231,22 @@ struct ImportPreviewSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding()
             } else {
+                #if os(macOS)
+                let visible = newItems
+                #else
                 let visible = showAllNew || newItems.count <= collapsedRowLimit
                     ? newItems : Array(newItems.prefix(collapsedRowLimit))
+                #endif
                 LazyVStack(spacing: 8) {
                     ForEach(visible) { item in
                         previewRow(item: item, color: .green)
                     }
                 }
+                #if !os(macOS)
                 if newItems.count > collapsedRowLimit {
                     expandButton(showAll: $showAllNew, color: .green, hiddenCount: newItems.count - collapsedRowLimit)
                 }
+                #endif
             }
         }
         .padding()
@@ -258,16 +284,22 @@ struct ImportPreviewSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding()
             } else {
+                #if os(macOS)
+                let visible = duplicateItems
+                #else
                 let visible = showAllDuplicates || duplicateItems.count <= collapsedRowLimit
                     ? duplicateItems : Array(duplicateItems.prefix(collapsedRowLimit))
+                #endif
                 LazyVStack(spacing: 8) {
                     ForEach(visible) { item in
                         previewRow(item: item, color: .orange)
                     }
                 }
+                #if !os(macOS)
                 if duplicateItems.count > collapsedRowLimit {
                     expandButton(showAll: $showAllDuplicates, color: .orange, hiddenCount: duplicateItems.count - collapsedRowLimit)
                 }
+                #endif
             }
         }
         .padding()
@@ -339,8 +371,16 @@ struct ImportPreviewSheet: View {
 
     // MARK: - Action Buttons
 
+    private var actionLayout: AnyLayout {
+        #if os(macOS)
+        AnyLayout(HStackLayout(alignment: .center, spacing: 10))
+        #else
+        AnyLayout(VStackLayout(spacing: 10))
+        #endif
+    }
+
     private var actionButtons: some View {
-        VStack(spacing: 10) {
+        actionLayout {
             Button(action: onImport) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.shield.fill")

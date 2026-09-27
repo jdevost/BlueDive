@@ -56,6 +56,9 @@ struct MainTabView: View {
         ZStack {
             Color.platformBackground.ignoresSafeArea()
             
+            #if os(macOS)
+            ContentView(desktopDestination: $selectedTab)
+            #else
             TabView(selection: $selectedTab) {
                 // --- TAB 1 : LOGBOOK ---
                 ContentView()
@@ -88,6 +91,7 @@ struct MainTabView: View {
                     .tag(3)
             }
             .accentColor(.cyan)
+            #endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .addDiveManual)) { _ in
             selectedTab = 0
@@ -282,6 +286,9 @@ struct MainTabView: View {
     // MARK: - Notification Scheduling at Launch
     
     private func scheduleNotificationsAtLaunch() async {
+        #if DEBUG
+        guard !BlueDiveLaunchMode.isEphemeralLogbook else { return }
+        #endif
         guard notificationsEnabled else {
             // Cancel any pending notifications left over if the flag was turned off
             // while the app was backgrounded (onChange wouldn't have fired in that case).

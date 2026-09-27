@@ -124,10 +124,14 @@ struct DuplicateImportSheet: View {
     }
 
     private var visibleDuplicates: [DuplicateImportMatch] {
+        #if os(macOS)
+        return duplicates
+        #else
         if showAllDuplicates || duplicates.count <= collapsedRowLimit {
             return duplicates
         }
         return Array(duplicates.prefix(collapsedRowLimit))
+        #endif
     }
 
     private var hiddenDuplicateCount: Int {
@@ -135,6 +139,30 @@ struct DuplicateImportSheet: View {
     }
 
     var body: some View {
+        #if os(macOS)
+        VStack(spacing: 16) {
+            headerCard
+            summaryCard
+            HSplitView {
+                ScrollView {
+                    newDivesList
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .frame(minWidth: 320)
+                ScrollView {
+                    duplicatesList
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .frame(minWidth: 320)
+            }
+            Divider()
+            actionButtons
+        }
+        .padding(20)
+        .background(Color.platformBackground)
+        .frame(minWidth: 760, idealWidth: 1040, minHeight: 600, idealHeight: 740)
+        .onExitCommand(perform: onCancel)
+        #else
         ZStack {
             Color.platformBackground.ignoresSafeArea()
             ScrollView {
@@ -148,13 +176,9 @@ struct DuplicateImportSheet: View {
                 .padding(.vertical, 24)
             }
         }
-        #if os(macOS)
-        .frame(
-            minWidth: 540, idealWidth: 620, maxWidth: 800,
-            minHeight: 520, idealHeight: 640, maxHeight: 900
-        )
         #endif
     }
+
 
     // MARK: - Header
 
@@ -306,9 +330,11 @@ struct DuplicateImportSheet: View {
                 }
             }
 
+            #if !os(macOS)
             if duplicates.count > collapsedRowLimit {
                 expandCollapseButton
             }
+            #endif
         }
         .padding()
         .background(
@@ -520,8 +546,16 @@ struct DuplicateImportSheet: View {
 
     // MARK: - Actions
 
+    private var actionLayout: AnyLayout {
+        #if os(macOS)
+        AnyLayout(HStackLayout(alignment: .center, spacing: 10))
+        #else
+        AnyLayout(VStackLayout(spacing: 10))
+        #endif
+    }
+
     private var actionButtons: some View {
-        VStack(spacing: 10) {
+        actionLayout {
             Button(action: onSkipDuplicates) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.shield.fill")

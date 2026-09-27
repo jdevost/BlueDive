@@ -13,8 +13,15 @@ extension Color {
         let percent = max(0.0, min(1.0, percentage))
         
         // Extract RGBA components for both colors
+        #if os(macOS)
+        let start = NSColor(self).usingColorSpace(.deviceRGB) ?? .black
+        let end = NSColor(Color.green).usingColorSpace(.deviceRGB) ?? .green
+        let startComponents = [start.redComponent, start.greenComponent, start.blueComponent, start.alphaComponent]
+        let endComponents = [end.redComponent, end.greenComponent, end.blueComponent, end.alphaComponent]
+        #else
         let startComponents = UIColor(self).cgColor.components ?? [0, 0, 0, 1]
         let endComponents = UIColor(Color.green).cgColor.components ?? [0, 0, 0, 1]
+        #endif
         
         // Handle fallback if components are missing
         let r1 = startComponents[0]

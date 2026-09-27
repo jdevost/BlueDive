@@ -258,6 +258,14 @@ struct ToggleButton: View {
 /// Ce view contient uniquement les courbes — il est Equatable donc SwiftUI
 /// ne le re-rend QUE si dive ou visibility changent, jamais quand le curseur bouge.
 private struct StaticChartLayer: View, Equatable {
+    private var profileLineInterpolation: InterpolationMethod {
+        #if os(macOS)
+        .linear
+        #else
+        .catmullRom
+        #endif
+    }
+
     let dive: Dive
     let visibility: ChartLineVisibility
     let xMax: Double
@@ -603,7 +611,7 @@ private struct StaticChartLayer: View, Equatable {
                     let normalised = ((displayTemp - axisMin) / axisRange).clamped(to: 0...1)
                     let value = -dive.displayMaxDepth * (1.0 - normalised)
                     LineMark(x: .value("Time", sample.time), y: .value("Temp.", value), series: .value("Sequence", "Temperature"))
-                        .interpolationMethod(.catmullRom)
+                        .interpolationMethod(profileLineInterpolation)
                         .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                         .foregroundStyle(Color.green)
                 }
@@ -655,7 +663,7 @@ private struct StaticChartLayer: View, Equatable {
                                 y: .value("Press.", value),
                                 series: .value("Sequence", "Pressure-T\(tankIdx)")
                             )
-                            .interpolationMethod(.catmullRom)
+                            .interpolationMethod(profileLineInterpolation)
                             .lineStyle(StrokeStyle(
                                 lineWidth: 2,
                                 lineCap: .round,
@@ -674,7 +682,7 @@ private struct StaticChartLayer: View, Equatable {
                         let displayPressure = dive.displayProfilePressure(pressure)
                         let value = -dive.displayMaxDepth * (1.0 - (displayPressure / maxDisplayPressure).clamped(to: 0...1))
                         LineMark(x: .value("Time", sample.time), y: .value("Press.", value), series: .value("Sequence", "Pressure"))
-                            .interpolationMethod(.catmullRom)
+                            .interpolationMethod(profileLineInterpolation)
                             .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                             .foregroundStyle(Color.red)
                     }
@@ -746,7 +754,7 @@ private struct StaticChartLayer: View, Equatable {
                     // NDL 0 → y = -displayMaxDepth (bottom).
                     let value = -dive.displayMaxDepth * (1.0 - (min(ndl, 99.0) / 100.0))
                     LineMark(x: .value("Time", sample.time), y: .value("NDL", value), series: .value("Sequence", "NDL"))
-                        .interpolationMethod(.catmullRom)
+                        .interpolationMethod(profileLineInterpolation)
                         .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                         .foregroundStyle(Color.ndlYellow)
                 }
@@ -781,7 +789,7 @@ private struct StaticChartLayer: View, Equatable {
                                 y: .value("PPO₂", y),
                                 series: .value("Sequence", "PPO2-S\(sensorIdx)")
                             )
-                            .interpolationMethod(.catmullRom)
+                            .interpolationMethod(profileLineInterpolation)
                             .lineStyle(StrokeStyle(
                                 lineWidth: 2,
                                 lineCap: .round,
@@ -803,7 +811,7 @@ private struct StaticChartLayer: View, Equatable {
                             y: .value("PPO₂", y),
                             series: .value("Sequence", "PPO2")
                         )
-                        .interpolationMethod(.catmullRom)
+                        .interpolationMethod(profileLineInterpolation)
                         .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                         .foregroundStyle(Color.indigo)
                     }
@@ -1298,9 +1306,13 @@ struct UnifiedDiveChartOptimized: View {
 
     private var chartView: some View {
         let lastSampleTime = dive.profileSamples.last?.time ?? 0
+        #if os(macOS)
+        let storedDurationMinutes = Double(dive.duration)
+        #else
         let storedDurationMinutes: Double = dive.duration >= 3600
             ? Double(dive.duration) / 60.0
             : Double(dive.duration)
+        #endif
         let xMax = max(lastSampleTime, storedDurationMinutes)
 
         return StaticChartLayer(dive: dive, visibility: visibility, xMax: xMax, prefs: prefs, tanksO2Hash: tanksO2Hash, unitsHash: unitsHash, hideClearedDecoStops: prefs.hideClearedDecoStops)
@@ -1366,6 +1378,9 @@ struct UnifiedDiveChartOptimized: View {
                                         if now.timeIntervalSince(lastTooltipUpdate) > 0.033 {
                                             lastTooltipUpdate = now
                                             cachedInterpolatedPoint = interpolatedPoint(at: fraction * xMax)
+                                            #if os(macOS)
+                                            cursorX = cachedInterpolatedPoint?.time
+                                            #endif
                                         }
                                     }
                                     .onEnded { _ in
@@ -1518,6 +1533,28 @@ struct UnifiedDiveChartOptimized: View {
         let samples = dive.profileSamples
         guard !samples.isEmpty else { return nil }
 
+        #if os(macOS)
+        // A desktop inspection always identifies a real sample, including its original
+        // timestamp and absent fields. Do not fill transmitter gaps or interpolate values.
+        var lower = 0
+        var upper = samples.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if samples[middle].time < cursorTime { lower = middle + 1 } else { upper = middle }
+        }
+        let after = min(lower, samples.count - 1)
+        let before = max(0, lower - 1)
+        let sample = abs(samples[before].time - cursorTime) <= abs(samples[after].time - cursorTime)
+            ? samples[before] : samples[after]
+        return ChartInterpolatedPoint(
+            time: sample.time, depth: sample.depth, temperature: sample.temperature,
+            tankPressure: sample.tankPressure, tankPressures: sample.tankPressures,
+            ndl: sample.ndl, ceilingDepth: sample.ceilingDepth, ppo2: sample.ppo2,
+            sensorPPO2: sample.sensorPPO2, events: sample.events,
+            currentGas: sample.currentGas, ascentSpeed: nil
+        )
+        #else
+
         // Binary search: first index where sample.time > cursorTime (samples are time-sorted).
         var lo = 0, hi = samples.count
         while lo < hi {
@@ -1587,6 +1624,7 @@ struct UnifiedDiveChartOptimized: View {
             currentGas: gasSource.currentGas,
             ascentSpeed: ascentSpeed
         )
+        #endif
     }
 
     /// Builds a clamped `ChartInterpolatedPoint` from a single sample (used at the edges).

@@ -275,6 +275,7 @@ final class CloudKitSyncMonitor {
     }
 
     private func fetchAccountInfo() {
+        guard !BlueDiveLaunchMode.isEphemeralLogbook else { return }
         accountFetchGeneration += 1
         let generation = accountFetchGeneration
         let container = CKContainer(identifier: Self.cloudKitContainerID)

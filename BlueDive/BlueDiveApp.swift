@@ -3,7 +3,11 @@ import SwiftData
 import UserNotifications
 import os.log
 import LibDCSwift
+#if os(iOS)
 import BackgroundTasks
+#else
+import AppKit
+#endif
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -50,16 +54,15 @@ struct LanguageOverrideModifier: ViewModifier {
 }
 
 #if os(macOS)
-/// App delegate that ensures the app terminates when the last window is closed.
+/// Keep the Mac app running when its window is closed.
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Disable macOS window tabbing so "View > Show Tab Bar" doesn't
-        // offer to open multiple window-tabs alongside the app's own TabView.
-        NSWindow.allowsAutomaticWindowTabbing = true
+        // The first desktop milestone uses one shared logbook workspace.
+        NSWindow.allowsAutomaticWindowTabbing = false
     }
 }
 #endif
@@ -117,65 +120,78 @@ struct BlueDiveApp: App {
     #endif
     
     var body: some Scene {
-        WindowGroup {
-            RootLaunchContainer {
-                MainTabView()
-            }
-            .preferredColorScheme(prefs.appearanceMode.colorScheme)
-            .tint(.cyan)
-            .modifier(LanguageOverrideModifier(locale: prefs.languageMode.locale))
-            .environment(diveStore)
-            .environment(syncMonitor)
-            .environment(importCoordinator)
-            .onChange(of: scenePhase) { _, newPhase in
-                #if os(iOS)
-                if newPhase == .background, !ProcessInfo.processInfo.isiOSAppOnMac {
-                    BackgroundSyncTask.schedule()
-                    if UserDefaults.standard.bool(forKey: BlueDiveApp.iCloudSyncEnabledKey) {
-                        Self.beginSyncBackgroundTask()
-                    }
-                }
-                #endif
-            }
-            .onOpenURL { url in
-                // Widget deep-links: bluedive://add/manual | bluedive://add/bluetooth
-                if let action = AddDiveDeepLink.action(for: url) {
-                    switch action {
-                    case .manual:
-                        NotificationCenter.default.post(name: .addDiveManual, object: nil)
-                    case .bluetooth:
-                        NotificationCenter.default.post(name: .addDiveBluetooth, object: nil)
-                    }
-                    return
-                }
-                // File open: .fit, .uddf, .ssrf, and .bluedive files from document
-                // associations, share sheet, AirDrop, or Files app. ContentView observes
-                // importCoordinator and calls handleExternalFileURL when this becomes non-nil.
-                if url.isFileURL {
-                    importCoordinator.pendingURL = url
+        #if os(macOS)
+        Window("BlueDive", id: "logbook") { appContent }
+            .modelContainer(Self.sharedModelContainer)
+            .defaultSize(width: 1440, height: 900)
+            .commands {
+                CommandGroup(replacing: .appInfo) {
+                    Button("About BlueDive") { showingAbout = true }
                 }
             }
-            #if os(macOS)
-            .sheet(isPresented: $showingAbout) {
-                AboutView()
-                    .presentationSizing(.page)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+        Settings {
+            SettingsView()
+                .environment(diveStore)
+                .environment(syncMonitor)
+                .environment(importCoordinator)
+                .modelContainer(Self.sharedModelContainer)
+                .tint(.cyan)
+                .modifier(LanguageOverrideModifier(locale: prefs.languageMode.locale))
+        }
+        #else
+        WindowGroup { appContent }
+            .modelContainer(Self.sharedModelContainer)
+        #endif
+    }
+
+    private var appContent: some View {
+        RootLaunchContainer {
+            MainTabView()
+        }
+        .preferredColorScheme(prefs.appearanceMode.colorScheme)
+        .tint(.cyan)
+        .modifier(LanguageOverrideModifier(locale: prefs.languageMode.locale))
+        .environment(diveStore)
+        .environment(syncMonitor)
+        .environment(importCoordinator)
+        .onChange(of: scenePhase) { _, newPhase in
+            #if os(iOS)
+            if newPhase == .background, !ProcessInfo.processInfo.isiOSAppOnMac {
+                BackgroundSyncTask.schedule()
+                if UserDefaults.standard.bool(forKey: BlueDiveApp.iCloudSyncEnabledKey) {
+                    Self.beginSyncBackgroundTask()
+                }
             }
             #endif
         }
-        .modelContainer(Self.sharedModelContainer)
-        #if os(macOS)
-        .commands {
-            CommandGroup(replacing: .appInfo) {
-                Button("About BlueDive") {
-                    showingAbout = true
+        .onOpenURL { url in
+            // Widget deep-links: bluedive://add/manual | bluedive://add/bluetooth
+            if let action = AddDiveDeepLink.action(for: url) {
+                switch action {
+                case .manual:
+                    NotificationCenter.default.post(name: .addDiveManual, object: nil)
+                case .bluetooth:
+                    NotificationCenter.default.post(name: .addDiveBluetooth, object: nil)
                 }
+                return
             }
+            // File open: .fit, .uddf, .ssrf, and .bluedive files from document
+            // associations, share sheet, AirDrop, or Files app. ContentView observes
+            // importCoordinator and calls handleExternalFileURL when this becomes non-nil.
+            if url.isFileURL {
+                importCoordinator.pendingURL = url
+            }
+        }
+        #if os(macOS)
+        .sheet(isPresented: $showingAbout) {
+            AboutView()
+                .presentationSizing(.page)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
         }
         #endif
     }
-    
+
     // MARK: - Schema
     
     /// Single source of truth for the SwiftData schema.
@@ -289,6 +305,16 @@ struct BlueDiveApp: App {
 
     private static func createModelContainer() -> ModelContainer {
         let schema = appSchema
+        #if DEBUG
+        if BlueDiveLaunchMode.isEphemeralLogbook {
+            let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
+            do {
+                return try ModelContainer(for: schema, configurations: [configuration])
+            } catch {
+                fatalError("Unable to create the isolated test logbook: \(error)")
+            }
+        }
+        #endif
 
         // 🔧 Delete old incompatible database on first launch after schema changes
         // TODO: Comment this out after successful first launch

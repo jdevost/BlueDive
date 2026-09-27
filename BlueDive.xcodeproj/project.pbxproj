@@ -15,7 +15,7 @@
 		0C89AA6C2F49EF2400B7EEBE /* LibDCSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 0C89AA6B2F49EF2400B7EEBE /* LibDCSwift */; };
 		0CF0DA742FB24469008E0330 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0CF0DA732FB24469008E0330 /* WidgetKit.framework */; };
 		0CF0DA762FB24469008E0330 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0CF0DA752FB24469008E0330 /* SwiftUI.framework */; };
-		0CF0DA812FB24469008E0330 /* BlueDiveWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0CF0DA722FB24469008E0330 /* BlueDiveWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0CF0DA812FB24469008E0330 /* BlueDiveWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0CF0DA722FB24469008E0330 /* BlueDiveWidgetExtensionExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -288,6 +288,7 @@
 /* Begin PBXTargetDependency section */
 		0CF0DA802FB24469008E0330 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 0CF0DA712FB24469008E0330 /* BlueDiveWidgetExtensionExtension */;
 			targetProxy = 0CF0DA7F2FB24469008E0330 /* PBXContainerItemProxy */;
 		};
@@ -372,9 +373,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = BlueDive/BlueDive.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 133;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = VYYYVK87G9;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
@@ -417,7 +420,7 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -439,9 +442,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = BlueDive/BlueDive.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 133;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = VYYYVK87G9;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
@@ -484,7 +489,7 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

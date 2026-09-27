@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct MarineLifeView: View {
+    var showsCloseButton = true
     @Environment(DiveStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
@@ -161,8 +162,10 @@ struct MarineLifeView: View {
             .frame(minWidth: 600, idealWidth: 750, maxWidth: 1000, minHeight: 500, idealHeight: 700, maxHeight: 900)
             #endif
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    closeToolbarButton { dismiss() }
+                if showsCloseButton {
+                    ToolbarItem(placement: .cancellationAction) {
+                        closeToolbarButton { dismiss() }
+                    }
                 }
                 DiverFilterToolbar(uniqueDivers: store.cachedUniqueDivers, selectedDiver: $selectedDiver)
             }

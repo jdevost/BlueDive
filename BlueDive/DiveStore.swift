@@ -623,6 +623,9 @@ final class DiveStore {
     }
 
     func updateWidgetDiveData(dives: [Dive]) {
+        #if DEBUG
+        guard !BlueDiveLaunchMode.isEphemeralLogbook else { return }
+        #endif
         guard !dives.isEmpty else { return }
         struct DiveSnapshot {
             let diverName: String

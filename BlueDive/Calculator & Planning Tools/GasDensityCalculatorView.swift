@@ -65,7 +65,9 @@ struct GasDensityCalculatorView: View {
                 resultsSection
             }
             .navigationTitle("Gas Density")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     closeToolbarButton { dismiss() }
@@ -357,7 +359,9 @@ struct GasDensityCalculatorView: View {
                 }
                 .padding(24)
             }
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 // A plain .navigationTitle truncates to one line; longer translations of
                 // this title (fr-CA, de) need to wrap, so this keeps the explicit two-line

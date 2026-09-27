@@ -113,6 +113,7 @@ struct TripBuilder {
 // MARK: - Dive Trips View
 
 struct DiveTripsView: View {
+    var showsCloseButton = true
     @Environment(\.dismiss) private var dismiss
     @Environment(DiveStore.self) private var store
     @State private var selectedTrip: DiveTrip? = nil
@@ -185,8 +186,10 @@ struct DiveTripsView: View {
             #endif
             .background(Color.platformBackground.ignoresSafeArea())
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    closeToolbarButton { dismiss() }
+                if showsCloseButton {
+                    ToolbarItem(placement: .cancellationAction) {
+                        closeToolbarButton { dismiss() }
+                    }
                 }
                 DiverFilterToolbar(uniqueDivers: store.cachedUniqueDivers, selectedDiver: $selectedDiver)
             }

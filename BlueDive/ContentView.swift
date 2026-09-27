@@ -22,6 +22,12 @@ extension UTType {
 let widgetAppGroupSuite = "group.app.bluedive.universal"
 
 struct ContentView: View {
+    #if os(macOS)
+    @Binding var desktopDestination: Int
+    @State private var desktopSelectedDiveID: UUID?
+    @State private var desktopTableSort: [KeyPathComparator<DiveSummary>] = []
+    @Environment(\.openSettings) private var openSettings
+    #endif
     @Environment(\.modelContext) var modelContext
     @Query(sort: \Dive.timestamp, order: .reverse) var dives: [Dive]
     @Query private var allInsurances: [DivingInsurance]
@@ -129,23 +135,37 @@ struct ContentView: View {
     
     var body: some View {
         @Bindable var store = store
-        NavigationStack {
+        logbookNavigation {
             ZStack {
                 backgroundGradient.ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    #if os(macOS)
+                    desktopContent
+                    #else
                     contentSection
+                    #endif
                 }
             }
 
             #if os(iOS)
             .searchable(text: $store.searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Site, location, buddy, country, type, tag, dive #…")
             #else
-            .searchable(text: $store.searchText, prompt: "Site, location, buddy, country, type, tag, dive #…")
+            .applyIf(desktopDestination == 0) { view in
+                view.searchable(text: $store.searchText, prompt: "Site, location, buddy, country, type, tag, dive #…")
+            }
             #endif
             .animation(.easeInOut(duration: 0.3), value: store.searchText)
-            .toolbar { toolbarContent }
+            .toolbar {
+                #if os(macOS)
+                if desktopDestination == 0 { toolbarContent }
+                #else
+                toolbarContent
+                #endif
+            }
+            #if os(iOS)
             .toolbarBackground(.visible, for: .navigationBar)
+            #endif
             .sheet(isPresented: $store.showFilterSheet) {
                 DiveFilterSheet(
                     availableYears: store.cachedAvailableYears,
@@ -581,6 +601,36 @@ struct ContentView: View {
     }
 
 
+    @ViewBuilder
+    private func logbookNavigation<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        #if os(macOS)
+        NavigationSplitView {
+            DesktopSidebar(selection: $desktopDestination)
+                .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 250)
+        } detail: {
+            NavigationStack { content() }
+        }
+        .frame(minWidth: 1000, minHeight: 650)
+        #else
+        NavigationStack { content() }
+        #endif
+    }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var desktopContent: some View {
+        switch desktopDestination {
+        case 1: DiveMapView()
+        case 2: GearListView()
+        case 3: DocumentsView()
+        case 4: DiveTripsView(showsCloseButton: false)
+        case 5: StatisticsView(showsCloseButton: false)
+        case 6: MarineLifeView(showsCloseButton: false)
+        default: DesktopLogbookView(selectedDiveID: $desktopSelectedDiveID, sortOrder: $desktopTableSort)
+        }
+    }
+    #endif
+
     // Extracted into a separate property to avoid Swift type-checker timeouts
     // caused by excessively long modifier chains in body.
     @ViewBuilder
@@ -954,7 +1004,7 @@ struct ContentView: View {
         }
         #else
         ToolbarItem(placement: .navigation) {
-            Button(action: { showSettings = true }) {
+            Button(action: { openSettings() }) {
                 Image(systemName: "gear")
                     .foregroundStyle(.cyan)
             }

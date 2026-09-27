@@ -1374,6 +1374,14 @@ struct PhotoPreviewSheet: View {
         self._cachedExportName = State(initialValue: "\(exportPrefix) \(PhotoPreviewSheet.exportDateFormatter.string(from: Date()))")
     }
 
+    private var photoNavigationPlacement: ToolbarItemPlacement {
+        #if os(macOS)
+        .automatic
+        #else
+        .bottomBar
+        #endif
+    }
+
     // Returns nil when photos is empty so callers never subscript into an empty array.
     private var currentPhoto: Data? {
         guard !photos.isEmpty else { return nil }
@@ -1386,13 +1394,20 @@ struct PhotoPreviewSheet: View {
                 if photos.isEmpty {
                     Color.platformBackground.ignoresSafeArea()
                 } else {
-                    TabView(selection: $currentIndex) {
-                        ForEach(photos.indices, id: \.self) { index in
-                            PhotoPageView(data: photos[index], index: index, total: photos.count)
-                                .tag(index)
+                    Group {
+                        #if os(macOS)
+                        PhotoPageView(data: photos[min(currentIndex, photos.count - 1)],
+                                      index: currentIndex, total: photos.count)
+                        #else
+                        TabView(selection: $currentIndex) {
+                            ForEach(photos.indices, id: \.self) { index in
+                                PhotoPageView(data: photos[index], index: index, total: photos.count)
+                                    .tag(index)
+                            }
                         }
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        #endif
                     }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
                     .opacity(isPageSeeded ? 1 : 0)
                     .animation(.easeIn(duration: 0.15), value: isPageSeeded)
                 }
@@ -1400,7 +1415,7 @@ struct PhotoPreviewSheet: View {
             .background(Color.platformBackground.ignoresSafeArea())
             .toolbar {
                 if photos.count > 1 {
-                    ToolbarItem(placement: .bottomBar) {
+                    ToolbarItem(placement: photoNavigationPlacement) {
                         Button {
                             currentIndex -= 1
                         } label: {
@@ -1408,13 +1423,13 @@ struct PhotoPreviewSheet: View {
                         }
                         .disabled(currentIndex == 0)
                     }
-                    ToolbarItem(placement: .bottomBar) {
+                    ToolbarItem(placement: photoNavigationPlacement) {
                         Text(verbatim: "\(currentIndex + 1) / \(photos.count)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
-                    ToolbarItem(placement: .bottomBar) {
+                    ToolbarItem(placement: photoNavigationPlacement) {
                         Button {
                             currentIndex += 1
                         } label: {

@@ -729,7 +729,9 @@ extension BluetoothScannerView {
                 .padding(24)
             }
             .navigationTitle("Sync Options")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     closeToolbarButton { showInfo = false }

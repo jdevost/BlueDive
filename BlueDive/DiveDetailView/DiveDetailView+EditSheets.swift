@@ -284,8 +284,8 @@ struct EditMenuStatsView: View {
                             Image(systemName: "calendar")
                                 .foregroundStyle(.secondary)
                                 .frame(width: 20)
-                            DatePicker("", selection: $workingTimestamp, displayedComponents: [.date, .hourMinuteAndSecond])
-                                .labelsHidden()
+                            DesktopDateTimePicker(selection: $workingTimestamp)
+                                .accessibilityLabel(Text("Date & Time"))
                         }
                         .padding(.vertical, 4)
                     }
@@ -3254,7 +3254,8 @@ struct EditGazView: View {
                 .padding(24)
             }
         }
-        .frame(width: 600, minHeight: 640)
+        .frame(width: 600)
+        .frame(minHeight: 640)
         .background(Color.platformBackground)
 
 #else

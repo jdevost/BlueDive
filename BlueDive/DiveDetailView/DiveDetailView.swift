@@ -16,6 +16,7 @@ enum DiveTab: String, CaseIterable, Identifiable {
     case conditions  = "Conditions"
     case gaz         = "Gas"
     case samples     = "Samples"
+    case notes       = "Notes"
     case xmlExport   = "XML Export"
     case uddfExport  = "UDDF Export"
 
@@ -28,6 +29,7 @@ enum DiveTab: String, CaseIterable, Identifiable {
         case .conditions:  return "Conditions"
         case .gaz:         return "Gas"
         case .samples:     return "Samples"
+        case .notes:       return "Notes"
         case .xmlExport:   return "XML Export"
         case .uddfExport:  return "UDDF Export"
         }
@@ -35,7 +37,11 @@ enum DiveTab: String, CaseIterable, Identifiable {
 
     /// Tabs visible in the tab bar (export tabs hidden)
     static var visibleCases: [DiveTab] {
+        #if os(macOS)
         allCases.filter { $0 != .xmlExport && $0 != .uddfExport }
+        #else
+        allCases.filter { $0 != .xmlExport && $0 != .uddfExport && $0 != .notes }
+        #endif
     }
 
     var icon: String {
@@ -45,6 +51,7 @@ enum DiveTab: String, CaseIterable, Identifiable {
         case .conditions:  return "cloud.sun"
         case .gaz:         return "bubbles.and.sparkles"
         case .samples:     return "waveform.path.ecg"
+        case .notes:       return "note.text"
         case .xmlExport:   return "doc.text.magnifyingglass"
         case .uddfExport:  return "doc.badge.gearshape.fill"
         }
@@ -57,6 +64,7 @@ enum DiveTab: String, CaseIterable, Identifiable {
         case .conditions:  return .yellow
         case .gaz:         return .green
         case .samples:     return .teal
+        case .notes:       return .orange
         case .xmlExport:   return .indigo
         case .uddfExport:  return .teal
         }
@@ -70,6 +78,8 @@ struct DiveDetailView: View {
     let sortedDives: [Dive]
     let isSlidePreview: Bool
     private let onTabChange: ((DiveTab) -> Void)?
+    private let desktopEditing: Binding<Bool>?
+    private let desktopDraft: Binding<[String: String]>?
     @Environment(\.modelContext) var modelContext
     @Environment(\.locale) var locale
     @Environment(\.dismiss) private var dismiss
@@ -83,6 +93,24 @@ struct DiveDetailView: View {
         var seen = Set<String>()
         return allFish.compactMap { seen.insert($0.name).inserted ? $0.name : nil }
     }
+
+    #if os(macOS)
+    @State private var localDesktopEditing = false
+    @State private var localDesktopDrafts: [UUID: [String: String]] = [:]
+
+    private var activeDesktopEditing: Binding<Bool> {
+        desktopEditing ?? $localDesktopEditing
+    }
+
+    private var activeDesktopDraft: Binding<[String: String]> {
+        if let desktopDraft { return desktopDraft }
+        let id = dive.id
+        return Binding(
+            get: { localDesktopDrafts[id] ?? [:] },
+            set: { localDesktopDrafts[id] = $0.isEmpty ? nil : $0 }
+        )
+    }
+    #endif
 
     @State var showEditSheet = false
     @State var showAddFish = false
@@ -138,11 +166,13 @@ struct DiveDetailView: View {
     }()
     #endif
 
-    init(dive: Dive, sortedDives: [Dive] = [], isSlidePreview: Bool = false, initialTab: DiveTab = .menu, diveNumber: Int = 0, onTabChange: ((DiveTab) -> Void)? = nil) {
+    init(dive: Dive, sortedDives: [Dive] = [], isSlidePreview: Bool = false, initialTab: DiveTab = .menu, diveNumber: Int = 0, onTabChange: ((DiveTab) -> Void)? = nil, desktopEditing: Binding<Bool>? = nil, desktopDraft: Binding<[String: String]>? = nil) {
         self._dive = State(initialValue: dive)
         self.sortedDives = sortedDives
         self.isSlidePreview = isSlidePreview
         self.onTabChange = onTabChange
+        self.desktopEditing = desktopEditing
+        self.desktopDraft = desktopDraft
         self._selectedTab = State(initialValue: initialTab)
         self._cachedDiveNumber = State(initialValue: diveNumber)
     }
@@ -238,28 +268,17 @@ struct DiveDetailView: View {
                 VStack(spacing: 0) {
                     diveTabBar
 
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(spacing: 20) {
-                                Color.clear.frame(height: 0).id("diveTop")
-                                switch selectedTab {
-                                case .menu:        menuTabContent
-                                case .siteDetails: siteDetailsTabContent
-                                case .conditions:  conditionsTabContent
-                                case .gaz:         gazTabContent
-                                case .samples:     samplesTabContent
-                                case .xmlExport:   xmlExportTabContent
-                                case .uddfExport:  uddfExportTabContent
-                                }
-                            }
-                            .padding(.bottom, 30)
-                            .animation(.easeInOut(duration: 0.25), value: selectedTab)
-                        }
-                        .scrollDisabled(scrollLocked)
-                        .onChange(of: dive) { _, _ in
-                            proxy.scrollTo("diveTop", anchor: .top)
-                        }
+                    #if os(macOS)
+                    if activeDesktopEditing.wrappedValue || selectedTab == .notes {
+                        DesktopDiveEditor(dive: dive, tab: selectedTab,
+                                          isEditing: activeDesktopEditing, draft: activeDesktopDraft,
+                                          onMore: { showEditSheet = true })
+                    } else {
+                        readOnlyTabContent
                     }
+                    #else
+                    readOnlyTabContent
+                    #endif
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
                 .background(Color.platformBackground)
@@ -415,11 +434,18 @@ struct DiveDetailView: View {
                 ToolbarItem(placement: .primaryAction) {
                     // Edit button
                     Button {
+                        #if os(macOS)
+                        activeDesktopEditing.wrappedValue.toggle()
+                        #else
                         showEditSheet = true
+                        #endif
                     } label: {
                         #if os(macOS)
-                        Label("Edit", systemImage: "pencil.circle.fill")
-                            .foregroundStyle(.cyan)
+                        if activeDesktopEditing.wrappedValue {
+                            Label("Done", systemImage: "checkmark.circle.fill")
+                        } else {
+                            Label("Edit", systemImage: "pencil.circle.fill")
+                        }
                         #else
                         Image(systemName: "pencil")
                             .foregroundStyle(.cyan)
@@ -582,6 +608,32 @@ struct DiveDetailView: View {
         }
     }
 
+    private var readOnlyTabContent: some View {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                Color.clear.frame(height: 0).id("diveTop")
+                                switch selectedTab {
+                                case .menu:        menuTabContent
+                                case .siteDetails: siteDetailsTabContent
+                                case .conditions:  conditionsTabContent
+                                case .gaz:         gazTabContent
+                                case .samples:     samplesTabContent
+                                case .notes:       notesSection
+                                case .xmlExport:   xmlExportTabContent
+                                case .uddfExport:  uddfExportTabContent
+                                }
+                            }
+                            .padding(.bottom, 30)
+                            .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                        }
+                        .scrollDisabled(scrollLocked)
+                        .onChange(of: dive) { _, _ in
+                            proxy.scrollTo("diveTop", anchor: .top)
+                        }
+                    }
+    }
+
     // MARK: - Tab Bar
 
     private var diveTabBar: some View {
@@ -656,6 +708,13 @@ struct DiveDetailView: View {
             EditGazView(dive: dive, tankIndex: selectedTankIndex) { newIndex in
                 selectedTankIndex = newIndex
             }
+        case .notes:
+            #if os(macOS)
+            DesktopDiveEditor(dive: dive, tab: .notes, isEditing: .constant(true),
+                              draft: activeDesktopDraft, onMore: {})
+            #else
+            notesSection
+            #endif
         case .samples:
             // Samples come from a dive computer — no manual editing
             noEditAvailableView(title: DiveTab.samples.localizedName,

@@ -34,7 +34,10 @@ struct DesktopLogbookView: View {
     @Binding var selectedDiveID: UUID?
     @Binding var sortOrder: [KeyPathComparator<DiveSummary>]
     @State private var prefs = UserPreferences.shared
-    @State private var selectedDetailTab: DiveTab = .menu
+    @Binding var selectedDetailTab: DiveTab
+    @Binding var isEditing: Bool
+    // Drafts belong to the logbook, not the recreated per-dive detail view.
+    @Binding var drafts: [UUID: [String: String]]
 
     private var rows: [DiveSummary] {
         sortOrder.isEmpty ? store.cachedFilteredSummaries : store.cachedFilteredSummaries.sorted(using: sortOrder)
@@ -54,6 +57,10 @@ struct DesktopLogbookView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(10)
+                if !drafts.isEmpty {
+                    Text("Unsaved drafts are kept until this logbook view closes.")
+                        .font(.caption).foregroundStyle(.orange).padding(10)
+                }
             }
             .frame(minWidth: 340, idealWidth: 480, maxWidth: 620, maxHeight: .infinity)
 
@@ -65,7 +72,12 @@ struct DesktopLogbookView: View {
                         dive: dive,
                         initialTab: selectedDetailTab,
                         diveNumber: dive.diveNumber ?? 0,
-                        onTabChange: { selectedDetailTab = $0 }
+                        onTabChange: { selectedDetailTab = $0 },
+                        desktopEditing: $isEditing,
+                        desktopDraft: Binding(
+                            get: { drafts[id] ?? [:] },
+                            set: { drafts[id] = $0.isEmpty ? nil : $0 }
+                        )
                     )
                         .id(id)
                 } else {
@@ -85,14 +97,27 @@ struct DesktopLogbookView: View {
 
     private var diveTable: some View {
         Table(rows, selection: $selectedDiveID, sortOrder: $sortOrder) {
+            TableColumn("Dive #") { summary in
+                Text(verbatim: summary.diveNumber.map { Double($0).localizedString(decimals: 0) } ?? "—")
+                    .monospacedDigit()
+            }
+            .width(min: 55, ideal: 65)
             TableColumn("Date", value: \.timestamp) { summary in
                 Text(summary.timestamp, format: .dateTime.year().month(.abbreviated).day().locale(locale))
             }
             .width(min: 100, ideal: 115)
             TableColumn("Site", value: \.siteName) { summary in
-                Text(verbatim: summary.siteName.isEmpty ? "—" : summary.siteName)
-                    .lineLimit(1)
-                    .help(summary.siteName)
+                HStack(spacing: 6) {
+                    Text(verbatim: summary.siteName.isEmpty ? "—" : summary.siteName)
+                        .lineLimit(1)
+                        .help(summary.siteName)
+                    if drafts[summary.id]?.isEmpty == false {
+                        Image(systemName: "pencil.circle.fill")
+                            .foregroundStyle(.orange)
+                            .accessibilityLabel(Text("Unsaved Changes"))
+                            .help(Text("Unsaved Changes"))
+                    }
+                }
             }
             .width(min: 120, ideal: 170)
             TableColumn("Depth", value: \.displayMaxDepth) { summary in

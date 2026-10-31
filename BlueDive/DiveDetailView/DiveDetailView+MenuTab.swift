@@ -44,7 +44,9 @@ extension DiveDetailView {
             photosSection
             equipmentSection
             marineSightingsSection
+            #if !os(macOS)
             notesSection
+            #endif
         }
         .task(id: dive.id) {
             profileSamplesLoaded = true

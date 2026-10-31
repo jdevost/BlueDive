@@ -25,6 +25,9 @@ struct ContentView: View {
     #if os(macOS)
     @Binding var desktopDestination: Int
     @State private var desktopSelectedDiveID: UUID?
+    @State private var desktopDetailTab: DiveTab = .menu
+    @State private var desktopEditing = false
+    @State private var desktopDrafts: [UUID: [String: String]] = [:]
     @State private var desktopTableSort: [KeyPathComparator<DiveSummary>] = []
     @Environment(\.openSettings) private var openSettings
     #endif
@@ -626,7 +629,7 @@ struct ContentView: View {
         case 4: DiveTripsView(showsCloseButton: false)
         case 5: StatisticsView(showsCloseButton: false)
         case 6: MarineLifeView(showsCloseButton: false)
-        default: DesktopLogbookView(selectedDiveID: $desktopSelectedDiveID, sortOrder: $desktopTableSort)
+        default: DesktopLogbookView(selectedDiveID: $desktopSelectedDiveID, sortOrder: $desktopTableSort, selectedDetailTab: $desktopDetailTab, isEditing: $desktopEditing, drafts: $desktopDrafts)
         }
     }
     #endif

@@ -57,3 +57,17 @@ Original example SHA-256 checksums, verified unchanged after testing:
 
 - BlueDive: `d56b818479ee827f555c62d8fb5ec4f40809db14e35c09595d0d6f41c55cf036`
 - UDDF: `43539230ba8c8a6dfbe648749cf0ee288ca1f8edade3e73eb8ad02933946b341`
+
+## Desktop inline editing
+
+On `feat/desktop-astra`, Edit toggles a persistent desktop editing mode. The selected detail tab, editing mode and per-dive text drafts are owned by ContentView and survive switching dives and sidebar destinations. An orange pencil in the Site column identifies a dive with a draft. Drafts are session-only: use Save Changes before closing the logbook or quitting. Done exits editing without implicitly saving or discarding drafts.
+
+Notes has a dedicated desktop tab with a full-height editor and selectable text in reading mode. Notes whitespace and line breaks are preserved exactly. The iOS tab list and overview Notes section stay unchanged.
+
+Inline fields cover buddies, operator, guide, captain, boat, tags, and textual conditions. Site Details now includes site name/location/country/body of water, difficulty, water type, altitude, entry/exit coordinates, copying an existing site, GPS reset, Same as Entry, and an inline map picker. Site Details no longer needs More Edit Options. Other measurements, timestamps and tank settings remain available through More Edit Options using the existing detailed sheets. That button is disabled while the selected dive has drafts, preventing a full-sheet save from overwriting an inline draft. Recorded samples remain read-only.
+
+Save Changes applies only drafted fields for the selected dive and leaves other measurement values, unit metadata, profile data and other fields untouched. It explicitly saves before refreshing the store; a save failure restores edited model fields, retains the draft, and displays the error inline. Discard Changes affects only the selected dive. Non-note text fields trim user-entered surrounding whitespace; untouched fields (including nil vs empty optional values) are not assigned. Coordinate and altitude drafts retain numeric precision and are validated before any fields are saved. Copying a site includes altitude only when stored distance units match. Opening or moving the map does not change coordinates; clicking a location explicitly updates the draft.
+
+Site Details follow-up verification: native Mac build and translation checks passed. In the isolated in-memory example logbook, invalid latitude was rejected, a high-precision latitude survived switching dives and saving without rounding, and the second dive retained its own values. The map opened inline and closing it left coordinates unchanged. This follow-up changes only macOS view code; iOS was not rebuilt again.
+
+Verification: native Mac build passed; iOS Simulator build passed with temporary matching app/widget bundle-ID overrides (the branch's existing desktop validation ID otherwise conflicts with the iOS widget ID). Translation checks passed. In an isolated in-memory logbook loaded from the 60-dive BlueDive example, verified separate multiline drafts across two dives, retained tab/edit mode, notes whitespace, Save affecting one dive, Discard restoring the other, sidebar round trips, and saved site-name updates in the table. No source examples or persistent dive models were changed. Runtime iOS and save-failure injection were not tested.

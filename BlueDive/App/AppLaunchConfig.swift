@@ -1,5 +1,16 @@
 import SwiftUI
 
+/// The unsigned Mac Debug build uses a disposable logbook and separate preferences.
+enum BlueDiveLocalTestMode {
+    static var isEnabled: Bool {
+        #if DEBUG && os(macOS)
+        Bundle.main.bundleIdentifier == "app.bluedive.desktop.local"
+        #else
+        false
+        #endif
+    }
+}
+
 enum DiveIntroConfig {
     static let versionStorageKey = "lastIntroShownVersion"
     static let currentVersion: String = appVersionBuild()

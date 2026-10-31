@@ -888,6 +888,7 @@ final class DiveStore {
     /// Writes the widget's App Group data from live dives (DiveDataFeeder, which holds the
     /// current @Query result).
     func updateWidgetDiveData(dives: [Dive]) {
+        guard !BlueDiveLocalTestMode.isEnabled else { return }
         // Capture value types on the main thread; computation runs on a background task.
         writeWidgetData(dives.map {
             WidgetDiveSnapshot(diverName: $0.diverName, duration: $0.duration,
@@ -900,6 +901,7 @@ final class DiveStore {
     /// await). Same values as the Dive-based entry point: summaries carry the raw stored
     /// depth, unit, duration and timestamp, and the diver name trimmed (trimmed again below).
     private func updateWidgetDiveData(summaries: [DiveSummary]) {
+        guard !BlueDiveLocalTestMode.isEnabled else { return }
         writeWidgetData(summaries.map {
             WidgetDiveSnapshot(diverName: $0.diverName, duration: $0.duration,
                                maxDepth: $0.maxDepth, importDistanceUnit: $0.importDistanceUnit,

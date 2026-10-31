@@ -424,6 +424,18 @@ struct BlueDiveApp: App {
     private static func createModelContainer() -> ModelContainer {
         let schema = appSchema
 
+        if BlueDiveLocalTestMode.isEnabled {
+            UserDefaults.standard.register(defaults: [iCloudSyncEnabledKey: false])
+            do {
+                return try ModelContainer(for: schema, configurations: [
+                    ModelConfiguration(schema: schema, isStoredInMemoryOnly: true,
+                                       cloudKitDatabase: .none)
+                ])
+            } catch {
+                fatalError("Unable to create the local test logbook: \(error)")
+            }
+        }
+
         // 🔧 Delete old incompatible database on first launch after schema changes
         // TODO: Comment this out after successful first launch
         // deleteOldDatabase()

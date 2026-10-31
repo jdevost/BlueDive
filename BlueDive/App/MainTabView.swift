@@ -390,6 +390,7 @@ struct MainTabView: View {
     // MARK: - Notification Scheduling at Launch
     
     private func scheduleNotificationsAtLaunch() async {
+        guard !BlueDiveLocalTestMode.isEnabled else { return }
         guard notificationsEnabled else {
             // Cancel any pending notifications left over if the flag was turned off
             // while the app was backgrounded (onChange wouldn't have fired in that case).
